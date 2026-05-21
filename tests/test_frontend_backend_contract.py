@@ -36,6 +36,10 @@ class FrontendBackendContractTest(unittest.TestCase):
         self.assertIn("productModal()", script)
         self.assertIn("permissionsModal(result.member, result.permissions)", script)
         self.assertIn("updateCurrentPlanCard()", script)
+        self.assertIn("updateMetrics(data.metrics)", script)
+        self.assertIn("metrics.estimated_sales", script)
+        self.assertIn("updateChannels(data.channels)", script)
+        self.assertIn("updateChannelRows()", script)
         self.assertNotIn('showToast("Reply sent locally")', script)
 
     def test_backend_allows_development_cors_for_direct_file_frontend(self):
@@ -61,16 +65,48 @@ class FrontendBackendContractTest(unittest.TestCase):
         self.assertIn("products", data)
         self.assertIn("team", data)
         self.assertIn("plans", data)
+        self.assertIn("metrics", data)
+        self.assertIn("channels", data)
         self.assertGreaterEqual(len(data["conversations"]), 1)
         self.assertIn("sale", data["conversations"][0])
+
+    def test_channels_endpoint_returns_backend_owned_sidebar_counts(self):
+        response = self.client.get("/api/channels")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertGreaterEqual(len(data), 3)
+        self.assertIn("name", data[0])
+        self.assertIn("count", data[0])
+
+    def test_metrics_endpoint_returns_backend_owned_cards(self):
+        response = self.client.get("/api/metrics")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("estimated_sales", data)
+        self.assertIn("avg_reply_time", data)
+        self.assertIn("urgent_count", data)
+        self.assertIn("top_product", data)
+        self.assertIn("active_subscribers", data)
+
+    def test_backend_can_mutate_metric_cards(self):
+        before = self.client.get("/api/metrics").get_json()
+        after_response = self.client.post("/api/metrics/demo-update", json={})
+
+        self.assertEqual(after_response.status_code, 200)
+        after = after_response.get_json()
+        self.assertGreater(after["estimated_sales"], before["estimated_sales"])
+        self.assertGreater(after["backend_revision"], before["backend_revision"])
+        self.assertIn("last_synced", after)
 
     def test_summary_endpoint_returns_ai_summary_data(self):
         response = self.client.get("/api/summary")
 
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
-        self.assertEqual(data["estimated_revenue"], "4,820 AZN")
-        self.assertEqual(data["most_requested"], "Black hoodie")
+        self.assertTrue(data["estimated_revenue"].endswith(" AZN"))
+        self.assertTrue(data["most_requested"])
         self.assertIsInstance(data["needs_reply"], int)
         self.assertIn("recommendation", data)
 
@@ -105,6 +141,7 @@ class FrontendBackendContractTest(unittest.TestCase):
         data = response.get_json()
         self.assertTrue(data["created"])
         self.assertEqual(data["sale"], sale)
+        self.assertIn("metrics", data)
 
     def test_sale_endpoint_rejects_incomplete_payload(self):
         response = self.client.post("/api/sales", json={"product": "Black hoodie"})

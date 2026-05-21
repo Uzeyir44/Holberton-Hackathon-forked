@@ -25,6 +25,7 @@ Flask routes included:
 
 - `GET /`
 - `GET /api/bootstrap`
+- `GET /api/channels`
 - `GET /api/summary`
 - `GET /api/notifications`
 - `POST /api/conversations/<conversation_id>/reply`

@@ -139,6 +139,25 @@ let plans = [
   { name: "Pro", price: "99 AZN", current: false, features: ["Unlimited channels", "Advanced analytics", "Priority support"] },
 ];
 
+let metrics = {
+  estimated_sales: 4820,
+  sales_change: "+18% from last week",
+  avg_reply_time: "7m 24s",
+  urgent_count: 1,
+  top_product: "Black hoodie",
+  top_product_requests: 42,
+  active_subscribers: 229,
+  channel_count: 3,
+  backend_revision: 0,
+  last_synced: "-",
+};
+
+let channels = [
+  { name: "Instagram", key: "instagram", count: 128 },
+  { name: "WhatsApp", key: "whatsapp", count: 64 },
+  { name: "Telegram", key: "telegram", count: 37 },
+];
+
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
 
@@ -171,6 +190,34 @@ function updateCurrentPlanCard() {
   card.querySelector("span").textContent = `${currentPlan.price} / month`;
 }
 
+function updateChannelRows() {
+  const container = document.querySelector("#channelRows");
+
+  if (!container) return;
+
+  container.innerHTML = channels
+    .map(
+      (channel) => `
+        <div class="channel-row">
+          <span class="dot ${channel.key}"></span>
+          ${channel.name}
+          <strong>${channel.count}</strong>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function updateMetrics(nextMetrics) {
+  if (!nextMetrics) return;
+  metrics = { ...metrics, ...nextMetrics };
+}
+
+function updateChannels(nextChannels) {
+  if (!nextChannels) return;
+  channels = nextChannels;
+}
+
 function installIcons(root = document) {
   root.querySelectorAll("[data-icon]").forEach((element) => {
     element.innerHTML = icons[element.dataset.icon] || "";
@@ -187,32 +234,31 @@ function setPage(page) {
 }
 
 function metricCards() {
-  const totalSales = conversations.reduce((sum, item) => sum + item.sale.revenue, 0) + 4553;
   return `
     <section class="metrics-grid" aria-label="Business metrics">
       <article class="metric-card revenue">
         <span class="metric-icon" data-icon="money"></span>
         <p>Estimated Sales</p>
-        <strong>${money(totalSales)}</strong>
-        <small>+18% from last week</small>
+        <strong>${money(metrics.estimated_sales)}</strong>
+        <small>${metrics.sales_change}</small>
       </article>
       <article class="metric-card">
         <span class="metric-icon" data-icon="clock"></span>
         <p>Avg. Reply Time</p>
-        <strong>7m 24s</strong>
-        <small>${conversations.filter((item) => item.urgent).length} urgent chats waiting</small>
+        <strong>${metrics.avg_reply_time}</strong>
+        <small>${metrics.urgent_count} urgent chats waiting</small>
       </article>
       <article class="metric-card">
         <span class="metric-icon" data-icon="bag"></span>
         <p>Top Product</p>
-        <strong>Black Hoodie</strong>
-        <small>42 requests this month</small>
+        <strong>${metrics.top_product}</strong>
+        <small>${metrics.top_product_requests} requests this month</small>
       </article>
       <article class="metric-card">
         <span class="metric-icon" data-icon="users"></span>
         <p>Active Subscribers</p>
-        <strong>229</strong>
-        <small>Across 3 message channels</small>
+        <strong>${metrics.active_subscribers}</strong>
+        <small>Across ${metrics.channel_count} message channels</small>
       </article>
     </section>
   `;
@@ -661,6 +707,7 @@ function render() {
   app.innerHTML = (views[state.page] || renderInbox)();
   installIcons(app);
   updateCurrentPlanCard();
+  updateChannelRows();
 }
 
 async function loadBackendData() {
@@ -676,11 +723,19 @@ async function loadBackendData() {
     products = data.products || products;
     team = data.team || team;
     plans = data.plans || plans;
+    updateMetrics(data.metrics);
+    updateChannels(data.channels);
     state.selectedId = conversations[0]?.id || state.selectedId;
     updateCurrentPlanCard();
+    updateChannelRows();
   } catch (error) {
     console.info("Using local demo data because Flask API is not available.");
   }
+}
+
+async function refreshMetrics() {
+  const nextMetrics = await getJson("/api/metrics");
+  updateMetrics(nextMetrics);
 }
 
 async function getJson(url) {
@@ -733,6 +788,7 @@ async function handleBackendAction(button) {
 
   if (action === "assign-urgent") {
     const result = await postJson("/api/conversations/assign-urgent", {});
+    updateMetrics(result?.metrics);
     conversations.forEach((conversation) => {
       if (conversation.urgent) {
         conversation.urgent = false;
@@ -752,6 +808,8 @@ async function handleBackendAction(button) {
       return;
     }
     replaceConversation(result.conversation);
+    updateMetrics(result.metrics);
+    updateChannels(result.channels);
     showToast("Suggested reply processed by backend");
     render();
     return;
@@ -781,6 +839,7 @@ async function handleBackendAction(button) {
       return;
     }
     team.push(result.member);
+    updateMetrics(result.metrics);
     showToast("Invite processed by backend");
     render();
     return;
@@ -865,8 +924,10 @@ document.addEventListener("click", async (event) => {
       showToast("Backend did not create sale record");
       return;
     }
+    updateMetrics(result.metrics);
     state.saleRecords.push(result.sale);
     showToast(`${selected.sale.product} sale record created by backend`);
+    render();
   }
 });
 
@@ -898,6 +959,7 @@ document.addEventListener("submit", async (event) => {
     }
 
     products.push(result.product);
+    updateMetrics(result.metrics);
     document.querySelector("#productModal")?.remove();
     showToast(`${result.product.name} added by backend`);
     render();
@@ -920,6 +982,8 @@ document.addEventListener("submit", async (event) => {
     }
 
     replaceConversation(result.conversation);
+    updateMetrics(result.metrics);
+    updateChannels(result.channels);
     showToast("Reply and sample customer response came from backend");
     render();
   }

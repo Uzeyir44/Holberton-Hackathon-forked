@@ -88,6 +88,21 @@ PRODUCTS = [
     {"name": "Gift box", "requests": 18, "sales": 12, "revenue": 240, "stock": 40, "trend": "Seasonal"},
 ]
 
+SALES_RECORDS = [
+    {"product": "Black hoodie", "quantity": 31, "revenue": 1240},
+    {"product": "Silver earrings", "quantity": 22, "revenue": 770},
+    {"product": "Lip gloss set", "quantity": 19, "revenue": 608},
+    {"product": "Gift box", "quantity": 12, "revenue": 240},
+]
+
+BASELINE_REVENUE = 1962
+METRIC_DEMO_STATE = {"revision": 0, "revenue_boost": 0, "reply_seconds_saved": 0}
+CHANNELS = [
+    {"name": "Instagram", "key": "instagram", "count": 128},
+    {"name": "WhatsApp", "key": "whatsapp", "count": 64},
+    {"name": "Telegram", "key": "telegram", "count": 37},
+]
+
 TEAM = [
     {"name": "Aysel", "role": "Owner", "conversations": 86, "reply": "5m", "status": "Online"},
     {"name": "Murad", "role": "Sales assistant", "conversations": 54, "reply": "9m", "status": "Online"},
@@ -113,6 +128,41 @@ def backend_stamp():
     return datetime.now().strftime("%H:%M:%S")
 
 
+def build_metrics():
+    total_revenue = BASELINE_REVENUE + METRIC_DEMO_STATE["revenue_boost"] + sum(int(item["revenue"]) for item in SALES_RECORDS)
+    urgent_count = len([item for item in CONVERSATIONS if item["urgent"]])
+    top_product = max(PRODUCTS, key=lambda item: int(item["requests"]))
+    channel_count = len({item["channel"] for item in CONVERSATIONS})
+    reply_seconds = max(180, 444 - METRIC_DEMO_STATE["reply_seconds_saved"])
+    reply_minutes = reply_seconds // 60
+    reply_remainder = reply_seconds % 60
+
+    return {
+        "estimated_sales": total_revenue,
+        "sales_change": f"+{18 + METRIC_DEMO_STATE['revision']}% from last week",
+        "avg_reply_time": f"{reply_minutes}m {reply_remainder:02d}s",
+        "urgent_count": urgent_count,
+        "top_product": top_product["name"],
+        "top_product_requests": top_product["requests"],
+        "active_subscribers": 225 + len(TEAM),
+        "channel_count": channel_count,
+        "backend_revision": METRIC_DEMO_STATE["revision"],
+        "last_synced": backend_stamp(),
+    }
+
+
+def build_channels():
+    return [dict(channel) for channel in CHANNELS]
+
+
+def increment_channel_count(channel_name):
+    key = channel_name.replace(" DM", "").lower()
+    channel = next((item for item in CHANNELS if item["key"] == key), None)
+
+    if channel is not None:
+        channel["count"] += 1
+
+
 @app.route("/")
 def index():
     log_action("served frontend dashboard")
@@ -128,19 +178,46 @@ def bootstrap():
             "products": PRODUCTS,
             "team": TEAM,
             "plans": PLANS,
+            "metrics": build_metrics(),
+            "channels": build_channels(),
         }
     )
 
 
+@app.get("/api/channels")
+def channels():
+    log_action("sent channel counts to frontend")
+    return jsonify(build_channels())
+
+
+@app.get("/api/metrics")
+def metrics():
+    log_action("sent live metrics to frontend")
+    return jsonify(build_metrics())
+
+
+@app.post("/api/metrics/demo-update")
+def demo_update_metrics():
+    METRIC_DEMO_STATE["revision"] += 1
+    METRIC_DEMO_STATE["revenue_boost"] += 137
+    METRIC_DEMO_STATE["reply_seconds_saved"] += 21
+    PRODUCTS[0]["requests"] += 1
+    log_action(
+        "changed dashboard metrics: "
+        f"revision {METRIC_DEMO_STATE['revision']}, revenue boost {METRIC_DEMO_STATE['revenue_boost']} AZN"
+    )
+    return jsonify(build_metrics())
+
+
 @app.get("/api/summary")
 def summary():
-    urgent_count = len([item for item in CONVERSATIONS if item["urgent"]])
+    current_metrics = build_metrics()
     log_action("generated AI summary for frontend")
     return jsonify(
         {
-            "estimated_revenue": "4,820 AZN",
-            "most_requested": "Black hoodie",
-            "needs_reply": urgent_count,
+            "estimated_revenue": f"{current_metrics['estimated_sales']:,} AZN",
+            "most_requested": current_metrics["top_product"],
+            "needs_reply": current_metrics["urgent_count"],
             "recommendation": "Restock silver earrings, assign WhatsApp replies after 18:00, and follow up with hoodie buyers tomorrow morning.",
         }
     )
@@ -195,6 +272,7 @@ def create_reply(conversation_id):
     conversation["urgent"] = True
     conversation["status"] = "Customer replied"
     conversation["preview"] = auto_reply
+    increment_channel_count(conversation["channel"])
     log_action(f"processed reply for {conversation['customer']}: '{text}'")
     log_action(f"created sample customer reply for {conversation['customer']}: '{auto_reply}'")
 
@@ -207,6 +285,8 @@ def create_reply(conversation_id):
             "preview": auto_reply,
             "conversation": conversation,
             "backend_processed": True,
+            "metrics": build_metrics(),
+            "channels": build_channels(),
         }
     )
 
@@ -221,7 +301,7 @@ def assign_urgent():
             count += 1
 
     log_action(f"assigned {count} urgent conversations to team")
-    return jsonify({"assigned": count, "message": f"{count} urgent conversations assigned"})
+    return jsonify({"assigned": count, "message": f"{count} urgent conversations assigned", "metrics": build_metrics()})
 
 
 @app.post("/api/conversations/<int:conversation_id>/priority")
@@ -246,8 +326,15 @@ def create_sale():
         log_action("sale record rejected: incomplete payload")
         return jsonify({"error": "Product, quantity, and revenue are required"}), 400
 
+    SALES_RECORDS.append(
+        {
+            "product": payload["product"],
+            "quantity": int(payload["quantity"]),
+            "revenue": int(payload["revenue"]),
+        }
+    )
     log_action(f"created sale record: {payload['quantity']} x {payload['product']} for {payload['revenue']} AZN")
-    return jsonify({"created": True, "sale": payload}), 201
+    return jsonify({"created": True, "sale": payload, "metrics": build_metrics()}), 201
 
 
 @app.post("/api/products")
@@ -269,7 +356,7 @@ def create_product():
     }
     PRODUCTS.append(new_product)
     log_action(f"created product from frontend form: {new_product['name']}")
-    return jsonify({"created": True, "product": new_product}), 201
+    return jsonify({"created": True, "product": new_product, "metrics": build_metrics()}), 201
 
 
 @app.post("/api/team/invite")
@@ -277,7 +364,7 @@ def invite_team_member():
     new_member = {"name": "New teammate", "role": "Sales assistant", "conversations": 0, "reply": "-", "status": "Invited"}
     TEAM.append(new_member)
     log_action("processed team invite")
-    return jsonify({"invited": True, "member": new_member}), 201
+    return jsonify({"invited": True, "member": new_member, "metrics": build_metrics()}), 201
 
 
 @app.post("/api/team/<name>/permissions")

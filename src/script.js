@@ -46,6 +46,12 @@ const state = {
   notificationsOpen: false,
 };
 
+const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:5000" : "";
+
+function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
+
 let conversations = [
   {
     id: 1,
@@ -145,6 +151,24 @@ function showToast(message) {
   toast.classList.add("visible");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => toast.classList.remove("visible"), 2200);
+}
+
+function replaceConversation(updatedConversation) {
+  const index = conversations.findIndex((conversation) => conversation.id === updatedConversation.id);
+
+  if (index >= 0) {
+    conversations[index] = updatedConversation;
+  }
+}
+
+function updateCurrentPlanCard() {
+  const card = document.querySelector("#currentPlanCard");
+  const currentPlan = plans.find((plan) => plan.current) || plans[0];
+
+  if (!card || !currentPlan) return;
+
+  card.querySelector("strong").textContent = currentPlan.name;
+  card.querySelector("span").textContent = `${currentPlan.price} / month`;
 }
 
 function installIcons(root = document) {
@@ -295,15 +319,18 @@ function renderInbox() {
               <p>${selected.channel} - Online now</p>
             </div>
           </div>
-          <button class="icon-button" data-demo-action="Conversation marked as priority" aria-label="More conversation actions">
+          <button class="icon-button" data-backend-action="priority" aria-label="More conversation actions">
             <span data-icon="more"></span>
           </button>
         </div>
         <div class="conversation-body">
           ${selected.messages.map(([type, text]) => `<div class="chat-bubble ${type}">${text}</div>`).join("")}
         </div>
+        <div class="backend-proof">
+          Chat updates are rendered from Flask responses. Backend sample replies include a timestamp.
+        </div>
         <form class="reply-box" id="replyForm">
-          <button class="icon-button" type="button" data-demo-action="Attachment picker opened" aria-label="Attach file">
+          <button class="icon-button" type="button" data-backend-action="attachment" aria-label="Attach file">
             <span data-icon="paperclip"></span>
           </button>
           <input id="replyInput" type="text" value="Sure, I can reserve them for you." aria-label="Reply message" />
@@ -366,7 +393,7 @@ function renderAttention() {
             <p class="eyebrow">Unanswered Queue</p>
             <h2>${urgent.length} urgent conversations</h2>
           </div>
-          <button class="primary-action" data-demo-action="All urgent conversations assigned"><span data-icon="check"></span>Assign All</button>
+          <button class="primary-action" data-backend-action="assign-urgent"><span data-icon="check"></span>Assign All</button>
         </div>
         ${conversationList(urgent)}
       </div>
@@ -378,9 +405,9 @@ function renderAttention() {
         </section>
         <section class="insight-card">
           <p class="eyebrow">Suggested Replies</p>
-          <button class="quick-reply" data-demo-action="Reply copied">Yes, this item is available. Please send size and delivery address.</button>
-          <button class="quick-reply" data-demo-action="Reply copied">We can reserve it for you today. Delivery is available in Baku.</button>
-          <button class="quick-reply" data-demo-action="Reply copied">This product is low in stock. Would you like us to hold it?</button>
+          <button class="quick-reply" data-backend-action="quick-reply">Yes, this item is available. Please send size and delivery address.</button>
+          <button class="quick-reply" data-backend-action="quick-reply">We can reserve it for you today. Delivery is available in Baku.</button>
+          <button class="quick-reply" data-backend-action="quick-reply">This product is low in stock. Would you like us to hold it?</button>
         </section>
       </div>
     </section>
@@ -437,7 +464,7 @@ function renderProducts() {
           <p class="eyebrow">AI Product Demand</p>
           <h2>Requested Products</h2>
         </div>
-        <button class="primary-action" data-demo-action="Product added"><span data-icon="plus"></span>Add Product</button>
+        <button class="primary-action" data-backend-action="add-product"><span data-icon="plus"></span>Add Product</button>
       </div>
       <div class="data-table">
         <div class="table-row table-head"><span>Product</span><span>Requests</span><span>Sales</span><span>Revenue</span><span>Stock</span><span>Signal</span></div>
@@ -474,7 +501,7 @@ function renderTeam() {
               <div class="extraction-row"><span>Conversations</span><strong>${member.conversations}</strong></div>
               <div class="extraction-row"><span>Avg. reply</span><strong>${member.reply}</strong></div>
               <div class="extraction-row"><span>Status</span><strong>${member.status}</strong></div>
-              <button class="secondary-action" data-demo-action="${member.name} permissions opened">Manage</button>
+              <button class="secondary-action" data-backend-action="manage-member" data-member="${member.name}">Manage</button>
             </article>
           `
         )
@@ -483,7 +510,7 @@ function renderTeam() {
         <span data-icon="plus"></span>
         <h2>Invite teammate</h2>
         <p>Add employees without sharing social media passwords.</p>
-        <button class="primary-action" data-demo-action="Invite sent">Send Invite</button>
+        <button class="primary-action" data-backend-action="invite-member">Send Invite</button>
       </article>
     </section>
   `;
@@ -503,9 +530,7 @@ function renderBilling() {
               <ul class="clean-list">
                 ${plan.features.map((feature) => `<li>${feature}</li>`).join("")}
               </ul>
-              <button class="${plan.current ? "secondary-action" : "primary-action"}" data-demo-action="${
-                plan.current ? "Current plan is already active" : `${plan.name} plan selected`
-              }">${plan.current ? "Active" : "Choose Plan"}</button>
+              <button class="${plan.current ? "secondary-action" : "primary-action"}" data-backend-action="select-plan" data-plan="${plan.name}">${plan.current ? "Active" : "Choose Plan"}</button>
             </article>
           `
         )
@@ -514,7 +539,7 @@ function renderBilling() {
   `;
 }
 
-function modalSummary() {
+function modalSummary(summary) {
   return `
     <div class="modal-backdrop" id="summaryModal">
       <section class="summary-modal" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
@@ -526,10 +551,98 @@ function modalSummary() {
           <button class="icon-button" id="closeModal" aria-label="Close summary">x</button>
         </div>
         <div class="modal-content">
-          <div class="extraction-row"><span>Estimated revenue</span><strong>4,820 AZN</strong></div>
-          <div class="extraction-row"><span>Most requested</span><strong>Black hoodie</strong></div>
-          <div class="extraction-row"><span>Needs reply</span><strong>${conversations.filter((item) => item.urgent).length} chats</strong></div>
-          <p class="muted">Recommendation: restock silver earrings, assign WhatsApp replies after 18:00, and follow up with hoodie buyers tomorrow morning.</p>
+          <div class="extraction-row"><span>Estimated revenue</span><strong>${summary.estimated_revenue}</strong></div>
+          <div class="extraction-row"><span>Most requested</span><strong>${summary.most_requested}</strong></div>
+          <div class="extraction-row"><span>Needs reply</span><strong>${summary.needs_reply} chats</strong></div>
+          <p class="muted">Recommendation: ${summary.recommendation}</p>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function productModal() {
+  return `
+    <div class="modal-backdrop" id="productModal">
+      <section class="summary-modal" role="dialog" aria-modal="true" aria-labelledby="productTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Add Product</p>
+            <h2 id="productTitle">Create tracked product</h2>
+          </div>
+          <button class="icon-button" data-close-modal aria-label="Close product form">x</button>
+        </div>
+        <form class="modal-content form-grid" id="productForm">
+          <label>
+            Product name
+            <input name="name" type="text" value="Cream cardigan" required />
+          </label>
+          <label>
+            Requests
+            <input name="requests" type="number" min="0" value="9" />
+          </label>
+          <label>
+            Sales
+            <input name="sales" type="number" min="0" value="4" />
+          </label>
+          <label>
+            Revenue
+            <input name="revenue" type="number" min="0" value="180" />
+          </label>
+          <label>
+            Stock
+            <input name="stock" type="number" min="0" value="12" />
+          </label>
+          <label>
+            Signal
+            <select name="trend">
+              <option>Manual</option>
+              <option>High demand</option>
+              <option>Restock soon</option>
+              <option>Growing</option>
+            </select>
+          </label>
+          <button class="primary-action" type="submit">Save Product</button>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function permissionsModal(member, permissions) {
+  const permissionLabels = {
+    can_reply: "Reply to conversations",
+    can_create_sales: "Create sale records",
+    can_manage_billing: "Manage billing",
+    can_invite_team: "Invite team members",
+  };
+
+  return `
+    <div class="modal-backdrop" id="permissionsModal">
+      <section class="summary-modal" role="dialog" aria-modal="true" aria-labelledby="permissionsTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Team Permissions</p>
+            <h2 id="permissionsTitle">${member.name}</h2>
+          </div>
+          <button class="icon-button" data-close-modal aria-label="Close permissions">x</button>
+        </div>
+        <div class="modal-content">
+          <div class="extraction-row"><span>Role</span><strong>${member.role}</strong></div>
+          <div class="extraction-row"><span>Status</span><strong>${member.status}</strong></div>
+          <div class="permission-list">
+            ${Object.entries(permissions)
+              .map(
+                ([key, enabled]) => `
+                  <label class="permission-row">
+                    <span>${permissionLabels[key]}</span>
+                    <input type="checkbox" ${enabled ? "checked" : ""} />
+                  </label>
+                `
+              )
+              .join("")}
+          </div>
+          <button class="primary-action" data-close-modal type="button">Done</button>
         </div>
       </section>
     </div>
@@ -547,11 +660,12 @@ function render() {
   };
   app.innerHTML = (views[state.page] || renderInbox)();
   installIcons(app);
+  updateCurrentPlanCard();
 }
 
 async function loadBackendData() {
   try {
-    const response = await fetch("/api/bootstrap", {
+    const response = await fetch(apiUrl("/api/bootstrap"), {
       headers: { Accept: "application/json" },
     });
 
@@ -563,14 +677,28 @@ async function loadBackendData() {
     team = data.team || team;
     plans = data.plans || plans;
     state.selectedId = conversations[0]?.id || state.selectedId;
+    updateCurrentPlanCard();
   } catch (error) {
     console.info("Using local demo data because Flask API is not available.");
   }
 }
 
+async function getJson(url) {
+  try {
+    const response = await fetch(apiUrl(url), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    return null;
+  }
+}
+
 async function postJson(url, payload) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -586,7 +714,94 @@ async function postJson(url, payload) {
   }
 }
 
-document.addEventListener("click", (event) => {
+async function handleBackendAction(button) {
+  const action = button.dataset.backendAction;
+
+  if (action === "priority") {
+    const selected = conversations.find((item) => item.id === state.selectedId);
+    const result = await postJson(`/api/conversations/${selected.id}/priority`, {});
+    selected.status = result?.status || "Priority";
+    showToast(result?.message || "Conversation marked as priority");
+    render();
+    return;
+  }
+
+  if (action === "attachment") {
+    showToast("Attachment action is frontend-only for now");
+    return;
+  }
+
+  if (action === "assign-urgent") {
+    const result = await postJson("/api/conversations/assign-urgent", {});
+    conversations.forEach((conversation) => {
+      if (conversation.urgent) {
+        conversation.urgent = false;
+        conversation.status = "Assigned";
+      }
+    });
+    showToast(result?.message || "Urgent conversations assigned");
+    render();
+    return;
+  }
+
+  if (action === "quick-reply") {
+    const selected = conversations.find((item) => item.id === state.selectedId);
+    const result = await postJson(`/api/conversations/${selected.id}/reply`, { text: button.textContent.trim() });
+    if (!result?.conversation) {
+      showToast("Backend did not process suggested reply");
+      return;
+    }
+    replaceConversation(result.conversation);
+    showToast("Suggested reply processed by backend");
+    render();
+    return;
+  }
+
+  if (action === "add-product") {
+    document.body.insertAdjacentHTML("beforeend", productModal());
+    return;
+  }
+
+  if (action === "manage-member") {
+    const member = button.dataset.member;
+    const result = await postJson(`/api/team/${encodeURIComponent(member)}/permissions`, {});
+    if (!result?.member || !result?.permissions) {
+      showToast("Backend did not load permissions");
+      return;
+    }
+    document.body.insertAdjacentHTML("beforeend", permissionsModal(result.member, result.permissions));
+    showToast(result.message);
+    return;
+  }
+
+  if (action === "invite-member") {
+    const result = await postJson("/api/team/invite", {});
+    if (!result?.member) {
+      showToast("Backend did not process invite");
+      return;
+    }
+    team.push(result.member);
+    showToast("Invite processed by backend");
+    render();
+    return;
+  }
+
+  if (action === "select-plan") {
+    const result = await postJson("/api/billing/select", { plan: button.dataset.plan });
+    if (result?.selected) {
+      plans = result.plans || plans.map((plan) => ({ ...plan, current: plan.name === button.dataset.plan }));
+    }
+    if (!result?.selected) {
+      showToast("Backend did not select plan");
+      return;
+    }
+    showToast(`${button.dataset.plan} plan selected by backend`);
+    render();
+    updateCurrentPlanCard();
+  }
+}
+
+document.addEventListener("click", async (event) => {
   const pageLink = event.target.closest("[data-page]");
   if (pageLink) {
     event.preventDefault();
@@ -608,33 +823,50 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const actionButton = event.target.closest("[data-demo-action]");
+  const actionButton = event.target.closest("[data-backend-action]");
   if (actionButton) {
-    showToast(actionButton.dataset.demoAction);
+    await handleBackendAction(actionButton);
     return;
   }
 
   if (event.target.closest("#summaryButton")) {
-    document.body.insertAdjacentHTML("beforeend", modalSummary());
+    const summary = await getJson("/api/summary");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      modalSummary(
+        summary || {
+          estimated_revenue: "4,820 AZN",
+          most_requested: "Black hoodie",
+          needs_reply: conversations.filter((item) => item.urgent).length,
+          recommendation:
+            "Restock silver earrings, assign WhatsApp replies after 18:00, and follow up with hoodie buyers tomorrow morning.",
+        }
+      )
+    );
     installIcons(document.querySelector("#summaryModal"));
     return;
   }
 
   if (event.target.closest("#notificationButton")) {
-    showToast("2 unanswered chats and 1 stock warning");
+    const notifications = await getJson("/api/notifications");
+    showToast(notifications?.message || "2 unanswered chats and 1 stock warning");
     return;
   }
 
-  if (event.target.closest("#closeModal") || event.target.id === "summaryModal") {
-    document.querySelector("#summaryModal")?.remove();
+  if (event.target.closest("[data-close-modal]") || event.target.classList.contains("modal-backdrop")) {
+    event.target.closest(".modal-backdrop")?.remove();
     return;
   }
 
   if (event.target.closest("#createSaleButton")) {
     const selected = conversations.find((item) => item.id === state.selectedId);
-    postJson("/api/sales", selected.sale);
-    state.saleRecords.push(selected.sale);
-    showToast(`${selected.sale.product} sale record created`);
+    const result = await postJson("/api/sales", selected.sale);
+    if (!result?.created) {
+      showToast("Backend did not create sale record");
+      return;
+    }
+    state.saleRecords.push(result.sale);
+    showToast(`${selected.sale.product} sale record created by backend`);
   }
 });
 
@@ -648,19 +880,47 @@ document.addEventListener("input", (event) => {
   }
 });
 
-document.addEventListener("submit", (event) => {
+document.addEventListener("submit", async (event) => {
+  if (event.target.id === "productForm") {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const payload = Object.fromEntries(formData.entries());
+    payload.requests = Number(payload.requests || 0);
+    payload.sales = Number(payload.sales || 0);
+    payload.revenue = Number(payload.revenue || 0);
+    payload.stock = Number(payload.stock || 0);
+
+    const result = await postJson("/api/products", payload);
+
+    if (!result?.product) {
+      showToast(result?.error || "Backend did not add product");
+      return;
+    }
+
+    products.push(result.product);
+    document.querySelector("#productModal")?.remove();
+    showToast(`${result.product.name} added by backend`);
+    render();
+    return;
+  }
+
   if (event.target.id === "replyForm") {
     event.preventDefault();
     const input = document.querySelector("#replyInput");
     const selected = conversations.find((item) => item.id === state.selectedId);
     if (!input.value.trim()) return;
     const replyText = input.value.trim();
-    postJson(`/api/conversations/${selected.id}/reply`, { text: replyText });
-    selected.messages.push(["outgoing", replyText]);
-    selected.urgent = false;
-    selected.status = "Replied";
-    selected.preview = replyText;
-    showToast("Reply sent");
+    input.disabled = true;
+    const result = await postJson(`/api/conversations/${selected.id}/reply`, { text: replyText });
+    input.disabled = false;
+
+    if (!result?.backend_processed || !result?.conversation) {
+      showToast("Backend did not process reply. Start Flask and open http://127.0.0.1:5000");
+      return;
+    }
+
+    replaceConversation(result.conversation);
+    showToast("Reply and sample customer response came from backend");
     render();
   }
 });

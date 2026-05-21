@@ -565,6 +565,15 @@ mark {
   background: var(--surface);
 }
 
+.backend-proof {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: #edf7f2;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .reply-box input {
   min-width: 0;
   height: 42px;
@@ -830,6 +839,59 @@ mark {
   padding: 18px;
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.form-grid .primary-action {
+  grid-column: 1 / -1;
+}
+
+.permission-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.permission-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
 .toast {
   position: fixed;
   right: 20px;
@@ -969,6 +1031,10 @@ meter::-webkit-meter-optimum-value {
   .search-box {
     width: 100%;
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
   .nav-list {

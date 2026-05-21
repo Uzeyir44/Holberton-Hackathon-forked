@@ -26,5 +26,20 @@ Flask routes included:
 - `GET /`
 - `GET /api/bootstrap`
 - `GET /api/summary`
+- `GET /api/notifications`
 - `POST /api/conversations/<conversation_id>/reply`
+- `POST /api/conversations/<conversation_id>/priority`
+- `POST /api/conversations/assign-urgent`
 - `POST /api/sales`
+- `POST /api/products`
+- `POST /api/team/invite`
+- `POST /api/team/<name>/permissions`
+- `POST /api/billing/select`
+
+When you use the frontend through Flask, backend actions are printed in the terminal with the prefix `[InboxPilot backend]`. Sending a chat reply also returns a sample incoming customer message so you can see two-way chat behavior.
+
+Run backend/frontend contract tests:
+
+```bash
+python -m unittest discover -s tests
+```

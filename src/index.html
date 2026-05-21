@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>InboxPilot Micro SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="brand" href="#inbox" data-page="inbox" aria-label="InboxPilot home">
+          <span class="brand-mark">I</span>
+          <span>
+            <strong>InboxPilot</strong>
+            <small>Micro SaaS CRM</small>
+          </span>
+        </a>
+
+        <nav class="nav-list" aria-label="Dashboard sections">
+          <a class="nav-item active" href="#inbox" data-page="inbox">
+            <span data-icon="inbox"></span>
+            Inbox
+          </a>
+          <a class="nav-item" href="#attention" data-page="attention">
+            <span data-icon="alert"></span>
+            Needs Attention
+          </a>
+          <a class="nav-item" href="#insights" data-page="insights">
+            <span data-icon="chart"></span>
+            Sales Insights
+          </a>
+          <a class="nav-item" href="#products" data-page="products">
+            <span data-icon="products"></span>
+            Products
+          </a>
+          <a class="nav-item" href="#team" data-page="team">
+            <span data-icon="team"></span>
+            Team
+          </a>
+          <a class="nav-item" href="#billing" data-page="billing">
+            <span data-icon="billing"></span>
+            Billing
+          </a>
+        </nav>
+
+        <div class="channel-status" aria-label="Account status">
+          <div class="plan-card">
+            <p class="eyebrow">Current Plan</p>
+            <strong>Starter</strong>
+            <span>29 AZN / month</span>
+          </div>
+          <p class="eyebrow">Connected Channels</p>
+          <div class="channel-row">
+            <span class="dot instagram"></span>
+            Instagram
+            <strong>128</strong>
+          </div>
+          <div class="channel-row">
+            <span class="dot whatsapp"></span>
+            WhatsApp
+            <strong>64</strong>
+          </div>
+          <div class="channel-row">
+            <span class="dot telegram"></span>
+            Telegram
+            <strong>37</strong>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main" id="app" aria-live="polite"></main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./script.js"></script>
+  </body>
+</html>

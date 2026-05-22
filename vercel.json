@@ -1,16 +1,5 @@
 {
-
-  "experimentalServices": {
-      "frontend": {
-          "routePrefix": "/"
-      },
-      "backend": {
-          "root": "backend",
-          "routePrefix": "/_/backend"
-      }
-  },
-
-  "outputDirectory": "src",
+  "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/" }

@@ -35,7 +35,7 @@ app.use(corsMiddleware);
 app.use(morgan("dev"));
 app.use(express.json());
 
-const frontendPath = path.resolve(__dirname, "../../src");
+const frontendPath = path.resolve(__dirname, "../..");
 app.use(express.static(frontendPath));
 
 app.use("/api/auth", authRoutes);

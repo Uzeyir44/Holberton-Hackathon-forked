@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  INSTAGRAM
+  WHATSAPP
+  TELEGRAM
+  MANUAL
+}
+
+enum SenderType {
+  CUSTOMER
+  BUSINESS
+}
+
+enum ConversationStatus {
+  ACTIVE
+  NEEDS_ATTENTION
+  RESOLVED
+  ARCHIVED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("owner")
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  avatar       String?
+  permissions  Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([businessId])
+}
+
+model Business {
+  id               String               @id @default(uuid())
+  name             String
+  subscription     String               @default("starter")
+  settings         Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  users            User[]
+  conversations    Conversation[]
+  integrations     PlatformIntegration[]
+  products         Product[]
+  analyticsSummaries AnalyticsSummary[]
+}
+
+model PlatformIntegration {
+  id            String   @id @default(uuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id])
+  platform      Platform
+  accountName   String
+  accessToken   String?
+  webhookSecret String?
+  isConnected   Boolean  @default(false)
+  lastSyncedAt  DateTime?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([businessId, platform, accountName])
+  @@index([businessId])
+}
+
+model Conversation {
+  id            String             @id @default(uuid())
+  businessId    String
+  business      Business           @relation(fields: [businessId], references: [id])
+  platform      Platform
+  platformId    String?
+  customerName  String
+  customerId    String
+  customerAvatar String?
+  status        ConversationStatus @default(ACTIVE)
+  isUrgent      Boolean            @default(false)
+  lastMessageAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  messages      Message[]
+  aiExtractions AIExtraction[]
+
+  @@unique([businessId, platform, platformId])
+  @@index([businessId, status])
+  @@index([businessId, isUrgent])
+  @@index([businessId, lastMessageAt])
+}
+
+model Message {
+  id              String     @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType      SenderType
+  content         String
+  platformMsgId   String?
+  metadata        Json?
+  sentAt          DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+
+  @@index([conversationId, sentAt])
+  @@index([conversationId, senderType])
+}
+
+model AIExtraction {
+  id              String   @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  productName     String?
+  quantity        Int?
+  revenue         Float?
+  currency        String   @default("AZN")
+  confidence      Float?
+  rawMessage      String?
+  createdAt       DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([productName])
+}
+
+model Product {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  requests   Int      @default(0)
+  sales      Int      @default(0)
+  revenue    Float    @default(0)
+  stock      Int      @default(0)
+  trend      String   @default("Manual")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([businessId, name])
+  @@index([businessId])
+}
+
+model AnalyticsSummary {
+  id                String   @id @default(uuid())
+  businessId        String
+  business          Business @relation(fields: [businessId], references: [id])
+  type              String
+  periodStart       DateTime
+  periodEnd         DateTime
+  estimatedRevenue  Float?
+  topProducts       Json?
+  urgentCount       Int?
+  avgReplyTime      Int?
+  recommendations   String?
+  rawSummary        String?
+  createdAt         DateTime @default(now())
+
+  @@unique([businessId, type, periodStart])
+  @@index([businessId, type])
+}

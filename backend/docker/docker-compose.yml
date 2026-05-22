@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: inboxpilot
+      POSTGRES_PASSWORD: inboxpilot
+      POSTGRES_DB: inboxpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "postgresql://inboxpilot:inboxpilot@db:5432/inboxpilot?schema=public"
+      JWT_SECRET: "dev-secret-docker"
+      JWT_EXPIRES_IN: "7d"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_MODEL: "gpt-4o-mini"
+      NODE_ENV: production
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

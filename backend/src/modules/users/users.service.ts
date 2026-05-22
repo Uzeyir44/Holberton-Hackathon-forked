@@ -22,7 +22,7 @@ export async function getTeam(businessId: string) {
     return TEAM_ROLES;
   }
 
-  return users.map((u) => ({
+  return users.map((u: any) => ({
     name: u.name,
     role: u.role,
     conversations: 0,

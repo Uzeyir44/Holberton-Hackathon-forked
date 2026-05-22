@@ -9,12 +9,12 @@ export async function getSalesAnalytics(businessId: string) {
     },
   });
 
-  const totalRevenue = conversations.reduce((sum, c) => {
+  const totalRevenue = conversations.reduce((sum: number, c: any) => {
     const extraction = c.aiExtractions[0];
     return sum + (extraction?.revenue || 0);
   }, 0);
 
-  const allExtractions = conversations.flatMap((c) => c.aiExtractions);
+  const allExtractions = conversations.flatMap((c: any) => c.aiExtractions);
   const productMap = new Map<string, { requests: number; revenue: number }>();
 
   for (const ext of allExtractions) {
@@ -30,11 +30,11 @@ export async function getSalesAnalytics(businessId: string) {
     .map(([name, data]) => ({ name, ...data }))
     .sort((a, b) => b.requests - a.requests);
 
-  const urgentCount = conversations.filter((c) => c.isUrgent).length;
+  const urgentCount = conversations.filter((c: any) => c.isUrgent).length;
 
   const replyTimes: number[] = [];
   for (const c of conversations) {
-    const msgs = c.messages.sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
+    const msgs = c.messages.sort((a: any, b: any) => a.sentAt.getTime() - b.sentAt.getTime());
     for (let i = 1; i < msgs.length; i++) {
       if (msgs[i].senderType === "BUSINESS" && msgs[i - 1].senderType === "CUSTOMER") {
         replyTimes.push(msgs[i].sentAt.getTime() - msgs[i - 1].sentAt.getTime());

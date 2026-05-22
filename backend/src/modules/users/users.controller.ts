@@ -13,6 +13,6 @@ export async function inviteMember(req: AuthRequest, res: Response) {
 }
 
 export async function getPermissions(req: AuthRequest, res: Response) {
-  const result = await usersService.getPermissions(req.params.name, req.businessId!);
+  const result = await usersService.getPermissions(req.params.name as string, req.businessId!);
   res.json(result);
 }

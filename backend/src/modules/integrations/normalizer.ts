@@ -1,4 +1,5 @@
-import { Platform, SenderType } from "@prisma/client";
+type Platform = "INSTAGRAM" | "WHATSAPP" | "TELEGRAM" | "MANUAL";
+type SenderType = "CUSTOMER" | "BUSINESS";
 
 export interface NormalizedMessage {
   platform: Platform;

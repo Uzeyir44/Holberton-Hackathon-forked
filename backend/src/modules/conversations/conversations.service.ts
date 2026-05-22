@@ -1,13 +1,11 @@
 import prisma from "../../config/database";
 import { NotFoundError } from "../../utils/errors";
 import { backendStamp } from "../../utils/helpers";
-import { Prisma } from "@prisma/client";
-
 export async function listConversations(
   businessId: string,
   filters: { status?: string; platform?: string; urgent?: string },
 ) {
-  const where: Prisma.ConversationWhereInput = { businessId };
+  const where: any = { businessId };
 
   if (filters.status) {
     where.status = filters.status.toUpperCase() as any;
@@ -31,7 +29,7 @@ export async function listConversations(
     orderBy: { lastMessageAt: "desc" },
   });
 
-  return conversations.map((c) => ({
+  return conversations.map((c: any) => ({
     id: c.id,
     customerName: c.customerName,
     platform: c.platform,
@@ -151,7 +149,7 @@ export async function getUnansweredConversations(businessId: string) {
     orderBy: { lastMessageAt: "asc" },
   });
 
-  return conversations.map((c) => {
+  return conversations.map((c: any) => {
     const lastMsg = c.messages[0];
     const unrepliedMinutes = lastMsg
       ? Math.floor((Date.now() - lastMsg.sentAt.getTime()) / 60000)

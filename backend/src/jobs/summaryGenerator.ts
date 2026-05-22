@@ -14,7 +14,7 @@ export function startSummaryGenerator() {
           include: { aiExtractions: true },
         });
 
-        const totalRevenue = conversations.reduce((sum, c) => {
+        const totalRevenue = conversations.reduce((sum: number, c: any) => {
           const ext = c.aiExtractions[0];
           return sum + (ext?.revenue || 0);
         }, 0);
@@ -53,7 +53,7 @@ export function startSummaryGenerator() {
               periodEnd: new Date(),
               estimatedRevenue: totalRevenue,
               topProducts: JSON.stringify(topProducts),
-              urgentCount: conversations.filter((c) => c.isUrgent).length,
+              urgentCount: conversations.filter((c: any) => c.isUrgent).length,
               recommendations: "Daily summary generated automatically.",
             },
           });

@@ -1,6 +1,7 @@
 import prisma from "../../config/database";
 import { normalizeMessage, NormalizedMessage } from "./normalizer";
-import { Platform } from "@prisma/client";
+
+type Platform = "INSTAGRAM" | "WHATSAPP" | "TELEGRAM" | "MANUAL";
 import { BadRequestError } from "../../utils/errors";
 
 export async function ingestMessage(
@@ -67,7 +68,7 @@ export async function getChannels(businessId: string) {
     ];
   }
 
-  return integrations.map((i) => ({
+  return integrations.map((i: any) => ({
     name: i.platform.charAt(0) + i.platform.slice(1).toLowerCase(),
     key: i.platform.toLowerCase(),
     count: 0,

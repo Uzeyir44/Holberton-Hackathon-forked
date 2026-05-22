@@ -12,7 +12,7 @@ export async function list(req: AuthRequest, res: Response) {
 
 export async function getById(req: AuthRequest, res: Response) {
   const conversation = await conversationsService.getConversationById(
-    req.params.id,
+    req.params.id as string,
     req.businessId!,
   );
   res.json({ conversation });
@@ -20,7 +20,7 @@ export async function getById(req: AuthRequest, res: Response) {
 
 export async function reply(req: AuthRequest, res: Response) {
   const result = await conversationsService.replyToConversation(
-    req.params.id,
+    req.params.id as string,
     req.businessId!,
     req.body.text,
   );
@@ -34,7 +34,7 @@ export async function assignUrgent(req: AuthRequest, res: Response) {
 
 export async function markPriority(req: AuthRequest, res: Response) {
   const result = await conversationsService.markPriority(
-    req.params.id,
+    req.params.id as string,
     req.businessId!,
   );
   res.json(result);

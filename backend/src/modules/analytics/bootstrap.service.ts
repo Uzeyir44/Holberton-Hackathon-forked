@@ -40,7 +40,7 @@ async function getDemoConversations(businessId: string) {
   });
 
   if (dbConversations.length > 0) {
-    return dbConversations.map((c, index) => {
+    return dbConversations.map((c: any, index: number) => {
       const initials = c.customerName
         .split(" ")
         .map((w: string) => w[0])
@@ -60,7 +60,7 @@ async function getDemoConversations(businessId: string) {
         status: c.isUrgent ? "Unanswered" : index === 0 ? "Hot" : "",
         urgent: c.isUrgent,
         preview: c.messages[c.messages.length - 1]?.content || "",
-        messages: c.messages.map((m) => [
+        messages: c.messages.map((m: any) => [
           m.senderType === "BUSINESS" ? "outgoing" : "incoming",
           m.content,
         ]),

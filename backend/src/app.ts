@@ -60,7 +60,7 @@ app.post("/api/metrics/demo-update", demoContext, async (_req: any, res) => {
 });
 
 app.get("/api/summary", demoContext, async (req: any, res) => {
-  const { default: aiService } = await import("./modules/ai/ai.service");
+  const aiService = await import("./modules/ai/ai.service");
   const conversations = await prisma.conversation.findMany({
     where: { businessId: req.businessId },
     include: { messages: { take: 5, orderBy: { sentAt: "desc" } } },
